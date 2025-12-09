@@ -278,3 +278,80 @@ def delete_task(
     db.delete(task)
     db.commit()
     return  # 204 No Content
+
+def build_basic_assistant_reply(message: str, notes, tasks) -> str:
+    """
+    Very simple rule-based helper so the chatbot works without an AI API.
+    Later you can replace this function with a real LLM call.
+    """
+    message_lower = message.lower()
+
+    if "summary" in message_lower or "summarize" in message_lower:
+        if not notes and not tasks:
+            return "You don't have any notes or tasks yet, so there isn't much to summarize. Try adding a note or a task first."
+
+        lines = []
+        if notes:
+            lines.append("Here is a quick summary of your recent notes:")
+            for n in notes[:5]:
+                lines.append(f"- Note {n.id}: {n.title}")
+        if tasks:
+            lines.append("")
+            lines.append("And here are some of your tasks:")
+            for t in tasks[:5]:
+                lines.append(f"- [{t.status}] {t.title} (priority: {t.priority})")
+
+        return "\n".join(lines)
+
+    if "what should i do" in message_lower or "next" in message_lower:
+        if not tasks:
+            return "You don't have any tasks yet. Maybe start by creating 2–3 concrete tasks based on your notes (for example: 'Send CV to company X', 'Prepare for interview')."
+
+        high = [t for t in tasks if t.priority == "high"]
+        if high:
+            top = high[0]
+            return (
+                f"I would start with your highest-priority task: '{top.title}'. "
+                f"Its status is '{top.status}'. Try to move it to 'in_progress' today."
+            )
+
+        first = tasks[0]
+        return (
+            f"Your next step could be: '{first.title}' (priority: {first.priority}). "
+            "Pick a small sub-step you can finish in 30 minutes."
+        )
+
+    # default generic reply
+    return (
+        "I'm a simple assistant right now. You can ask me things like:\n"
+        "- 'Give me a summary of my notes'\n"
+        "- 'Summarize my tasks'\n"
+        "- 'What should I do next?'\n"
+        "Later you can upgrade me to a real AI model by replacing the build_basic_assistant_reply function."
+    )
+
+
+@app.post("/assistant/chat", response_model=schemas.ChatResponse)
+def chat_with_assistant(
+    payload: schemas.ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Very simple assistant endpoint that has access to the current user's notes and tasks.
+    """
+    notes = (
+        db.query(models.Note)
+        .filter(models.Note.user_id == current_user.id)
+        .order_by(models.Note.created_at.desc())
+        .all()
+    )
+    tasks = (
+        db.query(models.Task)
+        .filter(models.Task.user_id == current_user.id)
+        .order_by(models.Task.created_at.desc())
+        .all()
+    )
+
+    reply_text = build_basic_assistant_reply(payload.message, notes, tasks)
+    return {"reply": reply_text}
