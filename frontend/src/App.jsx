@@ -37,6 +37,41 @@ function App() {
   const [error, setError] = useState("");
   const backendBaseUrl = "http://127.0.0.1:8000";
 
+    const handleDeleteNote = async (noteId) => {
+    if (!confirm("Delete this note?")) return;
+
+    try {
+      setError("");
+      await axios.delete(`${backendBaseUrl}/notes/${noteId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Remove from UI
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    } catch (err) {
+      console.error("Delete note error:", err);
+      setError("Failed to delete note.");
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (!confirm("Delete this task?")) return;
+
+    try {
+      setError("");
+      await axios.delete(`${backendBaseUrl}/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Remove from UI
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } catch (err) {
+      console.error("Delete task error:", err);
+      setError("Failed to delete task.");
+    }
+  };
+
+
   // ------------- AUTH -------------
 
   const handleLogin = async () => {
@@ -344,20 +379,33 @@ function App() {
 
                   <ul className="space-y-3">
                     {notes.map((note) => (
+                        
                       <li
                         key={note.id}
-                        className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2"
-                      >
-                        <div className="flex items-center justify-between gap-2">
+                      className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2"
+                                              >
+                                                <div className="flex items-center justify-between gap-2">
                           <h3 className="font-medium text-slate-50">
                             {note.title}
                           </h3>
-                          {note.tags && (
-                            <span className="text-[10px] uppercase tracking-wide rounded-full bg-sky-500/10 text-sky-300 px-2 py-0.5">
-                              {note.tags}
-                            </span>
-                          )}
+
+                          <div className="flex items-center gap-2">
+                            {note.tags && (
+                              <span className="text-[10px] uppercase tracking-wide rounded-full bg-sky-500/10 text-sky-300 px-2 py-0.5">
+                                {note.tags}
+                              </span>
+                            )}
+
+                            <button
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="text-xs px-2 py-1 rounded-md border border-slate-700 hover:bg-red-500/20 hover:border-red-500/40 transition"
+                              title="Delete note"
+                            >
+                              🗑
+                            </button>
+                          </div>
                         </div>
+
                         {note.content && (
                           <p className="mt-1 text-xs text-slate-300 whitespace-pre-wrap">
                             {note.content}
