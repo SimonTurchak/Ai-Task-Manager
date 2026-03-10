@@ -35,7 +35,7 @@ function App() {
 
 
   const [error, setError] = useState("");
-  const backendBaseUrl = "http://127.0.0.1:8000";
+  const backendBaseUrl = "https://job-tracker-yun4.onrender.com";
 
     const handleDeleteNote = async (noteId) => {
     if (!confirm("Delete this note?")) return;
